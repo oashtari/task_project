@@ -2,9 +2,8 @@
 
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
-    user_id 
+    user_id INTEGER,
     title VARCHAR NOT NULL,
     description TEXT NOT NULL,
-    completed BOOLEAN NOT NULL DEFAULT FALSE,
-
+    completed BOOLEAN NOT NULL DEFAULT FALSE
 )
