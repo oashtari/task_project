@@ -3,7 +3,9 @@
 
 mod services;
 // mod models;
+use diesel::{prelude::*, table, Insertable, Queryable};
 use rocket::{fairing::AdHoc, serde::json::Json, State};
+use rocket_sync_db_pools::database;
 use serde::{Serialize, Deserialize};
 
 table! {
@@ -15,6 +17,10 @@ table! {
         completed -> Bool, 
     }
 }
+
+#[database("my_db")]
+pub struct Db(diesel::PgConnection);
+
 #[derive(Queryable, Insertable, Serialize, Deserialize)]
 #[diesel(table_name = tasks)]
 pub struct Task {
@@ -96,6 +102,7 @@ fn rocket() -> _ {
     let rocket= rocket::build();
     
     rocket
+    .attach(Db::fairing())
     .attach(AdHoc::config::<Config>())
       .mount("/", routes![get_all_tasks, create_task, get_config])
       .mount("/tasks", routes![get_random_task, get_task])
