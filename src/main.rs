@@ -6,6 +6,15 @@ mod services;
 use rocket::{fairing::AdHoc, serde::json::Json, State};
 use serde::{Serialize, Deserialize};
 
+table! {
+    tasks (id) {
+        id -> Int4,
+        user_id -> Int4, 
+        title -> VarChar,
+        description -> Text,
+        completed -> Bool, 
+    }
+}
 #[derive(Queryable, Insertable, Serialize, Deserialize)]
 #[diesel(table_name = tasks)]
 pub struct Task {
@@ -14,6 +23,11 @@ pub struct Task {
     pub title: String,
     pub description: String,
     pub completed: bool,
+}
+
+#[get("/")]
+fn index() -> &'static str {
+    "Hello, world!"
 }
 
 #[get("/random")]
@@ -29,13 +43,46 @@ fn get_random_task() -> Json<Task> {
     )
 }
 
+#[get("/<id>")]
+fn get_task(id: i32) -> Json<Task> {
+    Json(
+        Task{
+            id,
+            user_id: 12,
+            title: "some_title".to_string(),
+            description: "some_description".to_string(),
+            completed: false,
+        }
+    )
+}
+
+#[get("/")]
+fn get_all_tasks() -> Json<Vec<Task>> {
+    Json(vec![
+        Task{
+            id:14,
+            user_id: 13,
+            title: "walk dogs".to_string(),
+            description: "take the dogs on their afternoon walk".to_string(),
+            completed: false,
+        },
+        Task{
+            id:15,
+            user_id: 164,
+            title: "make lunch".to_string(),
+            description: "heat up more ribs".to_string(),
+            completed: true,
+        }
+    ])
+}
+
 #[launch]
 fn rocket() -> _ {
     let rocket= rocket::build();
     
     rocket
-      .mount("/", routes![])
-      .mount("/tasks", routes![get_random_task])
+      .mount("/", routes![get_all_tasks])
+      .mount("/tasks", routes![get_random_task, get_task])
 }
 
 // #[post("/post", format="json", data="<task>" )]
