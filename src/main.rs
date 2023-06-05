@@ -25,9 +25,17 @@ pub struct Task {
     pub completed: bool,
 }
 
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
+#[derive(Deserialize)]
+struct Config {
+    name: String,
+    age: u8,
+}
+
+#[get("/config")]
+fn get_config(config: &State<Config>) -> String {
+    format!(
+      "Hello, {}! You are {} years old.", config.name, config.age
+   )
 }
 
 #[get("/random")]
@@ -59,7 +67,8 @@ fn get_task(id: i32) -> Json<Task> {
 #[get("/")]
 fn get_all_tasks() -> Json<Vec<Task>> {
     Json(vec![
-        Task{
+        Task
+        {
             id:14,
             user_id: 13,
             title: "walk dogs".to_string(),
@@ -76,12 +85,19 @@ fn get_all_tasks() -> Json<Vec<Task>> {
     ])
 }
 
+#[post("/", data = "<task>")]
+fn create_task(task: Json<Task>) -> Json<Task> {
+    task
+}
+
+
 #[launch]
 fn rocket() -> _ {
     let rocket= rocket::build();
     
     rocket
-      .mount("/", routes![get_all_tasks])
+    .attach(AdHoc::config::<Config>())
+      .mount("/", routes![get_all_tasks, create_task, get_config])
       .mount("/tasks", routes![get_random_task, get_task])
 }
 
