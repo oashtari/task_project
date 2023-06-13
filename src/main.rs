@@ -13,8 +13,14 @@ table! {
         id -> Int4,
         user_id -> Int4, 
         title -> VarChar,
-        description -> Text,
+        body -> VarChar,
         completed -> Bool, 
+    }
+}
+
+table! {
+    testing (id) {
+        id -> Int4,
     }
 }
 
@@ -27,8 +33,22 @@ pub struct Task {
     pub id: i32,
     pub user_id: i32,
     pub title: String,
-    pub description: String,
+    pub body: String,
     pub completed: bool,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = tasks)]
+pub struct NewTask<'a> {
+    pub user_id: &'a i32,
+    pub title: &'a str,
+    pub body: &'a str,
+}
+
+#[derive(Queryable, Insertable, Serialize, Deserialize)]
+#[diesel(table_name = testing)]
+pub struct Testing {
+    pub id: i32,
 }
 
 #[derive(Deserialize)]
@@ -51,7 +71,7 @@ fn get_random_task() -> Json<Task> {
             id: 1,
             user_id: 1,
             title: "My first task".to_string(),
-            description: "This is my first task".to_string(),
+            body: "This is my first task".to_string(),
             completed: false,
         }
     )
@@ -64,7 +84,7 @@ fn get_task(id: i32) -> Json<Task> {
             id,
             user_id: 12,
             title: "some_title".to_string(),
-            description: "some_description".to_string(),
+            body: "some_description".to_string(),
             completed: false,
         }
     )
@@ -78,22 +98,64 @@ fn get_all_tasks() -> Json<Vec<Task>> {
             id:14,
             user_id: 13,
             title: "walk dogs".to_string(),
-            description: "take the dogs on their afternoon walk".to_string(),
+            body: "take the dogs on their afternoon walk".to_string(),
             completed: false,
         },
         Task{
             id:15,
             user_id: 164,
             title: "make lunch".to_string(),
-            description: "heat up more ribs".to_string(),
+            body: "heat up more ribs".to_string(),
             completed: true,
         }
     ])
 }
 
 #[post("/", data = "<task>")]
-fn create_task(task: Json<Task>) -> Json<Task> {
-    task
+async fn create_task(connection: Db, task: Json<Task>) -> Json<Task> {
+    connection
+    .run(move |c| {
+        diesel::insert_into(tasks::table)
+            .values(&task.into_inner())
+            .get_result(c)
+    })
+    .await
+    .map(Json)
+    .expect("sigggghhhh")
+}
+
+#[get("/puppy")]
+fn get_testing_puppy() -> Json<Testing> {
+    Json(
+        Testing {
+            id: 12,
+        }
+    )
+}
+
+pub fn create_task(conn: &mut PgConnection, user_id: &i32, title: &str, body: &str) -> Post {
+    // use crate::schema::posts;
+
+    let new_task = NewTask { user_id, title, body };
+
+    diesel::insert_into(tasks::table)
+        .values(&new_task)
+        .returning(Task::as_returning())
+        .get_result(conn)
+        .expect("Error saving new post")
+}
+
+#[post("/", data = "<testing>")]
+async fn create_test(connection: Db, testing: Json<Testing>) -> Json<Testing> {
+    connection
+    .run(move |c| {
+        diesel::insert_into(testing::table)
+        .values(&testing.into_inner())
+        .get_result(c)
+    })
+    .await
+    .map(Json)
+    .expect("OY OY OY")
 }
 
 
@@ -106,6 +168,7 @@ fn rocket() -> _ {
     .attach(AdHoc::config::<Config>())
       .mount("/", routes![get_all_tasks, create_task, get_config])
       .mount("/tasks", routes![get_random_task, get_task])
+      .mount("/testing", routes![create_test, get_testing_puppy])
 }
 
 // #[post("/post", format="json", data="<task>" )]

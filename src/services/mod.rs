@@ -22,7 +22,7 @@ use std::env;
 #[derive(Serialize, Deserialize)]
 pub struct NewTask {
     title: String,
-    description: String,
+    body: String,
     // completed: false,
 }
 
